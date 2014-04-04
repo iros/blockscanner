@@ -3,16 +3,15 @@
   "version": "0.0.1",
   "description": "Scans d3 blocks for api occurance",
   "main": "src/runner.js",
-
   "author": "Irene Ros",
-  "git"
   "license": "MIT",
-
   "dependencies": {
     "github": "~0.1.15",
     "cheerio": "~0.14.0",
     "when": "~3.0.1",
     "github-oauth": "0.0.4",
-    "lodash": "~2.4.1"
+    "lodash": "~2.4.1",
+    "bull": "~0.1.5",
+    "redis": "~0.10.1"
   }
 }
