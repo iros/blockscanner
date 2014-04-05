@@ -6,20 +6,26 @@ var RedisClient = Redis.createClient(6379, "127.0.0.1");
 var When = require("when");
 var CSV = require("csv");
 var https = require("https");
+var _ = require("lodash");
 
 // ==== src deps
 var blockFinder = require('./blockfinder');
 var parse = require(__dirname + '/parser');
 
 // ==== config
+var config = require("../config.js");
 var userDoc = "https://docs.google.com/spreadsheet/pub?"+
   "key=0Al5UYaVoRpW3dE12bzRTVEp2RlJDQXdUYUFmODNiTHc&single=true&gid=0&output=csv";
 
 // ==== our queues
-var blockListQueue = new Queue("JOB: Gets blocks for a user", 6379, "127.0.0.1");
-var gistParserQueue = new Queue("JOB: Gets API usage in a gist", 6379, "127.0.0.1");
-var apiAggregatorQueue = new Queue("JOB: Aggregates API usage", 6379, "127.0.0.1");
-var redisStorageQueue = new Queue("JOB: Store in Redis", 6379, "127.0.0.1");
+var blockListQueue = new Queue("JOB: Gets blocks for a user",
+    config.redis.port, config.redis.host);
+var gistParserQueue = new Queue("JOB: Gets API usage in a gist",
+    config.redis.port, config.redis.host);
+var apiAggregatorQueue = new Queue("JOB: Aggregates API usage",
+    config.redis.port, config.redis.host);
+var redisStorageQueue = new Queue("JOB: Store in Redis",
+    config.redis.port, config.redis.host);
 
 // ==== message queues
 var MessageTypes = {
@@ -221,7 +227,7 @@ https.get(userDoc, function(res) {
 
       // when we have all the users, kick off our queue.
       .on("end", function() {
-        users.forEach(function(user) {
+        _.uniq(users).forEach(function(user) {
           blockListQueue.add({ userId: user });
         });
 
