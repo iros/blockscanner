@@ -16,6 +16,7 @@ var numWorkers = require('os').cpus().length;
 var blockListQueue = new Queue("JOB: Gets blocks for a user", 6379, "127.0.0.1");
 var gistParserQueue = new Queue("JOB: Gets API usage in a gist", 6379, "127.0.0.1");
 var apiAggregatorQueue = new Queue("JOB: Aggregates API usage", 6379, "127.0.0.1");
+var redisStorageQueue = new Queue("JOB: Store in Redis", 6379, "127.0.0.1");
 
 // ==== message queues
 var MessageTypes = {
@@ -67,67 +68,59 @@ gistParserQueue.process(function(job, done) {
 // Aggregates API
 apiAggregatorQueue.process(function(job, done) {
 
-  var apiHits = job.data.apiHits;
-
-  // make a deferred object for each one of the API end points
-  var deferreds = [], promises = [], def;
-  apiHits.forEach(function(api) {
-    def = When.defer();
-    deferreds.push(def);
-    promises.push(def.promise);
+  job.data.apiHits.forEach(function(api, i) {
+    redisStorageQueue.add({ block : job.data.block, api : api });
   });
 
-  apiHits.forEach(function(api, i) {
-    var redisKey = "API::" + api;
+  done();
+});
 
-    def = deferreds[i];
+// stores API in redis
+redisStorageQueue.process(function(job,done) {
 
-    RedisClient.get(redisKey, function(err, res) {
-      if (err) { def.reject(err); }
+  var block = job.data.block;
+  var apiCall = job.data.api;
 
-      // we don't have an entry yet, MAKE ONE!
-      if (res === null || res.length === 0) {
-        res = {
-          api : api,
-          blocks : [job.data.block.id],
-          count : 1
-        };
+  var redisKey = "API::" + apiCall;
+
+  RedisClient.get(redisKey, function(err, res) {
+    if (err) { done(new Error(err)); }
+
+    // we don't have an entry yet, MAKE ONE!
+    if (res === null || res.length === 0) {
+
+      res = {
+        api : apiCall,
+        blocks : [job.data.block.id],
+        count : 1
+      };
+
+      RedisClient.set(redisKey, JSON.stringify(res), function(err) {
+        if (err) { done(new Error(err)); }
+        else { done(); }
+      });
+
+    // we already have an entry so:
+    //  - add this block to the block list
+    //  - increment counter
+    } else {
+      res = JSON.parse(res);
+
+      if (res.blocks.indexOf(block.id) === -1) {
+        res.blocks.push(block.id);
+        res.count += 1;
 
         RedisClient.set(redisKey, JSON.stringify(res), function(err) {
-          if (!err) { def.resolve(); }
+          if (err) { done(new Error(err)); }
+          else { done(); }
         });
 
-      // we already have an entry so:
-      //  - add this block to the block list
-      //  - increment counter
+      // do nothing if this block is already registered.
       } else {
-
-        res = JSON.parse(res);
-
-        if (res.blocks.indexOf(job.data.block.id) === -1) {
-          res.blocks.push(job.data.block.id);
-          res.count += 1;
-
-          RedisClient.set(redisKey, JSON.stringify(res), function(err) {
-            if (!err) { def.resolve(); }
-          });
-
-        // do nothing if this block is already registered.
-        } else {
-          def.resolve();
-        }
+        done();
       }
-    });
+    }
   });
-
-  When.all(promises).then(function() {
-    // ALL api calls have been processed for this gist
-    messageQueue.add({ type : MessageTypes.APIProcessed, block: job.data.block });
-    done();
-  }, function(err) {
-    done(new Error(err));
-  });
-
 });
 
 // MAIN BROKER QUEUE
@@ -142,10 +135,10 @@ messageQueue.process(function(message, done) {
 
   // we have API hits for a single block
   if (message.data.type === MessageTypes.GistParsed) {
-    console.log("Parsed gist " + message.data.block.id);
 
     // we only want to handle gists that have API hits, obvs
     if (message.data.apiHits.length !== 0) {
+      console.log("Parsed gist " + message.data.block.id);
       apiAggregatorQueue.add(message.data);
     }
     done();
