@@ -194,15 +194,21 @@ messageQueue.process(function(message, done) {
 });
 
 
-// ==== Queue error handling
-blockListQueue.on("failed", function(job, err) {
-  console.error(err);
-});
+// ==== Queue error handling & cleanup
+var cleanup = function(job) { job.remove(); };
+var logError = function(job, err) { console.log(err); };
+blockListQueue.on("completed", cleanup)
+  .on("failed", logError);
+gistParserQueue.on("completed", cleanup)
+  .on("failed", logError);
+apiAggregatorQueue.on("completed", cleanup)
+  .on("failed", logError);
+redisStorageQueue.on("completed", cleanup)
+  .on("failed", logError);
+messageQueue.on("completed", cleanup)
+  .on("failed", logError);
 
-messageQueue.on("failed", function(job, err) {
-  console.error(err);
-});
-
+// ==== MAIN RUN
 // Get the google spreadsheet of users
 https.get(userDoc, function(res) {
   var doc = "";
