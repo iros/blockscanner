@@ -1,0 +1,17 @@
+module.exports = {
+
+  githubToken : "YOUR TOKEN",
+
+  redis: {
+    host : "127.0.0.1",
+    port: 6379
+  },
+
+  // amazon s3
+  S3: {
+    folder: 'api/',
+    key: 'API KEY',
+    secret: 'SEKRET KEY',
+    bucket: 'S3 BUCKET'
+  },
+};
