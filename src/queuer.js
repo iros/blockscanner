@@ -2,7 +2,8 @@
 var Queue = require("bull");
 var Cluster = require("cluster");
 var Redis = require("redis");
-var RedisClient = Redis.createClient(6379, "127.0.0.1");
+var config = require("../config.js");
+var RedisClient = Redis.createClient(config.redis.port, config.redis.host);
 var When = require("when");
 var CSV = require("csv");
 var https = require("https");
@@ -13,7 +14,7 @@ var blockFinder = require('./blockfinder');
 var parse = require(__dirname + '/parser');
 
 // ==== config
-var config = require("../config.js");
+
 var userDoc = "https://docs.google.com/spreadsheet/pub?"+
   "key=0Al5UYaVoRpW3dE12bzRTVEp2RlJDQXdUYUFmODNiTHc&single=true&gid=0&output=csv";
 
