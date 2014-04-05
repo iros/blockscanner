@@ -4,13 +4,16 @@ var Cluster = require("cluster");
 var Redis = require("redis");
 var RedisClient = Redis.createClient(6379, "127.0.0.1");
 var When = require("when");
+var CSV = require("csv");
+var https = require("https");
 
 // ==== src deps
 var blockFinder = require('./blockfinder');
 var parse = require(__dirname + '/parser');
 
 // ==== config
-var numWorkers = require('os').cpus().length;
+var userDoc = "https://docs.google.com/spreadsheet/pub?"+
+  "key=0Al5UYaVoRpW3dE12bzRTVEp2RlJDQXdUYUFmODNiTHc&single=true&gid=0&output=csv";
 
 // ==== our queues
 var blockListQueue = new Queue("JOB: Gets blocks for a user", 6379, "127.0.0.1");
@@ -69,7 +72,11 @@ gistParserQueue.process(function(job, done) {
 apiAggregatorQueue.process(function(job, done) {
 
   job.data.apiHits.forEach(function(api, i) {
-    redisStorageQueue.add({ block : job.data.block, api : api });
+    redisStorageQueue.add({
+      block : job.data.block,
+      api : api,
+      apiHits : job.data.apiHits
+    });
   });
 
   done();
@@ -92,8 +99,16 @@ redisStorageQueue.process(function(job,done) {
       res = {
         api : apiCall,
         blocks : [job.data.block.id],
-        count : 1
+        count : 1,
+        coocurance : {}
       };
+
+      // initialize co-occurance database
+      job.data.apiHits.forEach(function(otherCall) {
+        if (otherCall !== apiCall) {
+          res.coocurance[otherCall] = 1;
+        }
+      });
 
       RedisClient.set(redisKey, JSON.stringify(res), function(err) {
         if (err) { done(new Error(err)); }
@@ -109,6 +124,11 @@ redisStorageQueue.process(function(job,done) {
       if (res.blocks.indexOf(block.id) === -1) {
         res.blocks.push(block.id);
         res.count += 1;
+
+        // increment co-occurance database
+        job.data.apiHits.forEach(function(otherCall) {
+          res.coocurance[otherCall] = res.coocurance[otherCall] + 1 || 1;
+        });
 
         RedisClient.set(redisKey, JSON.stringify(res), function(err) {
           if (err) { done(new Error(err)); }
@@ -138,7 +158,6 @@ messageQueue.process(function(message, done) {
 
     // we only want to handle gists that have API hits, obvs
     if (message.data.apiHits.length !== 0) {
-      console.log("Parsed gist " + message.data.block.id);
       apiAggregatorQueue.add(message.data);
     }
     done();
@@ -146,7 +165,6 @@ messageQueue.process(function(message, done) {
 
   // we added the API
   if (message.data.type === MessageTypes.APIProcessed) {
-    console.log("API Processed for " + message.data.block.id);
     done();
   }
 
@@ -162,7 +180,57 @@ messageQueue.on("failed", function(job, err) {
   console.error(err);
 });
 
-var users = ["vlandham", "sxv"];
-users.forEach(function(user) {
-  blockListQueue.add({ userId: user});
+// Get the google spreadsheet of users
+https.get(userDoc, function(res) {
+  var doc = "";
+
+  // assemble the result
+  res.on("data", function(chunk) {
+    doc += chunk;
+  });
+
+  // when we have the full document...
+  res.on("end", function() {
+    var users = [];
+
+    // parse it as a csv and extract the user names
+    CSV()
+      .from.string(doc)
+      .on("record", function(row, idx) {
+        if (idx > 0) {
+          users.push(row[1]);
+        }
+      })
+
+      // when we have all the users, kick off our queue.
+      .on("end", function() {
+        users.forEach(function(user) {
+          blockListQueue.add({ userId: user });
+        });
+
+        var allZero = 0;
+
+        // set watch on our queue
+        setInterval(function() {
+          When.all([
+            blockListQueue.count(),
+            gistParserQueue.count(),
+            apiAggregatorQueue.count(),
+            redisStorageQueue.count()
+          ]).then(
+            function(results) {
+              if ((results[0] + results[1] + results[2] + results[3]) === 0) {
+                allZero += 1;
+              }
+
+              // if the last 10 readings were all zero, exit program
+              if (allZero === 10) {
+                console.log("terminating");
+                process.exit();
+              }
+            });
+
+        }, 1000);
+      });
+  });
 });
