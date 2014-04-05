@@ -75,6 +75,7 @@ apiAggregatorQueue.process(function(job, done) {
     redisStorageQueue.add({
       block : job.data.block,
       api : api,
+      userId: job.data.userId,
       apiHits : job.data.apiHits
     });
   });
@@ -98,9 +99,18 @@ redisStorageQueue.process(function(job,done) {
 
       res = {
         api : apiCall,
-        blocks : [job.data.block.id],
+        blocks : {},
         count : 1,
         coocurance : {}
+      };
+
+      // cache block userId, description & thumbnail
+      res.blocks[job.data.block.id] = {
+        userId: job.data.userId,
+        description : job.data.block.description,
+        thumbnail: job.data.block.files["thumbnail.png"] ?
+          job.data.block.files["thumbnail.png"].raw_url :
+          ""
       };
 
       // initialize co-occurance database
@@ -121,8 +131,15 @@ redisStorageQueue.process(function(job,done) {
     } else {
       res = JSON.parse(res);
 
-      if (res.blocks.indexOf(block.id) === -1) {
-        res.blocks.push(block.id);
+      if (typeof res.blocks[block.id] === "undefined") {
+
+        res.blocks[block.id] = {
+          userId: job.data.userId,
+          description: block.description,
+          thumbnail : job.data.block.files["thumbnail.png"] ?
+            job.data.block.files["thumbnail.png"].raw_url :
+            ""
+        };
         res.count += 1;
 
         // increment co-occurance database
