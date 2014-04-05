@@ -35,7 +35,8 @@ var MessageTypes = {
   APIProcessed : 3
 };
 
-var messageQueue = new Queue("BROKER: Message broker", 6379, "127.0.0.1");
+var messageQueue = new Queue("BROKER: Message broker",
+    config.redis.port, config.redis.host);
 
 // every time we are told to get the blocks for a user..
 blockListQueue.process(function(job, done) {
