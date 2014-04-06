@@ -7,6 +7,7 @@ var RedisClient = Redis.createClient(config.redis.port, config.redis.host);
 var When = require("when");
 var Fs = require("fs");
 var S3Upload = require("./s3uploader");
+var path = require("path");
 
 // ==== queues
 var fileMaker = new Queue("JOB: Create file per API call",
@@ -18,7 +19,7 @@ fileMaker.process(function(job, done) {
   RedisClient.get(job.data.api, function(err, res) {
     if (res.length > 0) {
       res = JSON.parse(res);
-      var fileName = "./api/" + job.data.api.split("::")[1] + ".json";
+      var fileName = path.join(__dirname, "../", "api", job.data.api.split("::")[1] + ".json");
       Fs.writeFile(fileName, JSON.stringify(res, null, 2),
         function(err) {
           if (err) { done(new Error(err)); }
