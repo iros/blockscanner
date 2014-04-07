@@ -57,23 +57,27 @@ blockListQueue.process(function(job, done) {
 // Parses a single gist.
 gistParserQueue.process(function(job, done) {
 
-  // parse each returned block
-  job.data.blocks.forEach(function(block) {
+  if (job.data.blocks.length) {
+    // parse each returned block
+    job.data.blocks.forEach(function(block) {
 
-    // get each block's API hits
-    parse(block).then(function(apiHits) {
+      // get each block's API hits
+      parse(block).then(function(apiHits) {
 
-      messageQueue.add({
-        userId: job.data.userId,
-        block: block,
-        type: MessageTypes.GistParsed,
-        apiHits: apiHits
+        messageQueue.add({
+          userId: job.data.userId,
+          block: block,
+          type: MessageTypes.GistParsed,
+          apiHits: apiHits
+        });
+        done();
+      }, function(err) {
+        done(new Error(err));
       });
-      done();
-    }, function(err) {
-      done(new Error(err));
     });
-  });
+  } else {
+    done();
+  }
 });
 
 // Aggregates API
@@ -235,6 +239,7 @@ https.get(userDoc, function(res) {
 
       // when we have all the users, kick off our queue.
       .on("end", function() {
+
         _.uniq(users).forEach(function(user) {
           blockListQueue.add({ userId: user });
         });

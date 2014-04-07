@@ -93,6 +93,8 @@ module.exports = function(block) {
         });
       });
     }
+  } else {
+    allFetched.resolve(existing);
   }
 
   allFetched.promise.then(function() {
