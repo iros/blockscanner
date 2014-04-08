@@ -17,6 +17,9 @@ var fileUploader = new Queue("JOB: Upload done API files",
 
 fileMaker.process(function(job, done) {
   RedisClient.get(job.data.api, function(err, res) {
+
+    if (err) { done(new Error(err)); }
+
     if (res.length > 0) {
       res = JSON.parse(res);
       var fileName = path.join(__dirname, "../", "api", job.data.api.split("::")[1] + ".json");
