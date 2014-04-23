@@ -322,5 +322,6 @@ module.exports = [
   "d3.geo.wagner6",
   "d3.geo.wagner7",
   "d3.geo.wiechel",
-  "d3.geo.winkel3"
+  "d3.geo.winkel3",
+  "d3.chart"
 ];
