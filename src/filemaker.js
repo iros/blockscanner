@@ -8,6 +8,7 @@ var When = require("when");
 var Fs = require("fs");
 var S3Upload = require("./s3uploader");
 var path = require("path");
+var zipper = require("./zipper");
 
 // ==== queues
 var fileMaker = new Queue("JOB: Create file per API call",
@@ -58,7 +59,21 @@ fileUploader.on("completed", function(job) {
   fileUploader.count().then(function(remaining) {
     if (remaining === 0) {
       console.log("All files uploaded");
-      process.exit();
+
+      // zip them all, and upload the zip file too
+      zipper("api", ["*.json"]).then(function(fileName) {
+        S3Upload(fileName).then(function(fileName) {
+          console.log("Uploaded zip file");
+          process.exit();
+        }, function(err) {
+          console.error("Failed to upload zip file");
+          process.exit();
+        });
+      }, function(err) {
+        console.error("Failed to zip api files");
+        process.exit();
+      });
+
     }
   });
 });
