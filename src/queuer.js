@@ -40,7 +40,6 @@ var messageQueue = new Queue("BROKER: Message broker",
 
 // every time we are told to get the blocks for a user..
 blockListQueue.process(function(job, done) {
-
   blockFinder(job.data.userId).then(function(blocks) {
     messageQueue.add({
       type: MessageTypes.GistsFetched,
@@ -86,7 +85,8 @@ apiAggregatorQueue.process(function(job, done) {
   job.data.apiHits.forEach(function(api, i) {
     redisStorageQueue.add({
       block : job.data.block,
-      api : api,
+      api : api.name,
+      count: api.count,
       userId: job.data.userId,
       apiHits : job.data.apiHits
     });
@@ -120,6 +120,7 @@ redisStorageQueue.process(function(job,done) {
       res.blocks[job.data.block.id] = {
         userId: job.data.userId,
         description : job.data.block.description,
+        count: job.data.count,
         thumbnail: job.data.block.files["thumbnail.png"] ?
           job.data.block.files["thumbnail.png"].raw_url :
           ""
@@ -127,8 +128,9 @@ redisStorageQueue.process(function(job,done) {
 
       // initialize co-occurance database
       job.data.apiHits.forEach(function(otherCall) {
-        if (otherCall !== apiCall) {
-          res.coocurance[otherCall] = 1;
+        if(!otherCall) return;
+        if (otherCall.name !== apiCall) {
+          res.coocurance[otherCall.name] = 1;
         }
       });
 
@@ -147,6 +149,7 @@ redisStorageQueue.process(function(job,done) {
 
         res.blocks[block.id] = {
           userId: job.data.userId,
+          count: job.data.count,
           description: block.description,
           thumbnail : job.data.block.files["thumbnail.png"] ?
             job.data.block.files["thumbnail.png"].raw_url :
@@ -156,7 +159,8 @@ redisStorageQueue.process(function(job,done) {
 
         // increment co-occurance database
         job.data.apiHits.forEach(function(otherCall) {
-          res.coocurance[otherCall] = res.coocurance[otherCall] + 1 || 1;
+          if(!otherCall) return;
+          res.coocurance[otherCall.name] = res.coocurance[otherCall.name] + 1 || 1;
         });
 
         RedisClient.set(redisKey, JSON.stringify(res), function(err) {
@@ -198,7 +202,6 @@ messageQueue.process(function(message, done) {
   }
 
 });
-
 
 // ==== Queue error handling & cleanup
 var cleanup = function(job) { job.remove(); };
