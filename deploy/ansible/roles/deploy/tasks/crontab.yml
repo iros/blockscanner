@@ -1,0 +1,7 @@
+#
+# setup cron job for the files
+#
+
+- name: setup cron job
+  cron: name="run scanner" minute="0" hour="0/2" job="cd /home/iros/blockscanner && date > queuer.log && node src/queuer.js >> queuer.
+log && date > filemaker.log && node src/filemaker.js >> filemaker.log"

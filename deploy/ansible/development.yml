@@ -1,0 +1,13 @@
+# Provision and setup development server.
+
+- hosts: all
+  sudo: yes
+  vars:
+    commit: master
+    force: false
+  roles:
+    - base
+    - configure
+    - deploy
+  handlers:
+    - include: handlers/handlers.yml

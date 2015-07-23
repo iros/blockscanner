@@ -1,0 +1,10 @@
+# For [localdev] referenced in the Vagrantfile
+
+env: development
+
+# Vagrant box hostname and FQDN. The app_fqdn setting should match the
+# config.hostsupdater.aliases setting in the Vagrantfile.
+hostname: blockscanner.local
+app_fqdn: blockscanner.local
+
+home_dir: /home/vagrant/

@@ -1,0 +1,5 @@
+#
+# copy local config.js with connection info
+#
+- name: copy config for s3 & redis connection
+  copy: src=config.js dest={{site_path}}
