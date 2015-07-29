@@ -55,6 +55,6 @@
     - redis
 
 - name: setup cronjob
-  include: redis.yml
+  include: crontab.yml
   tags:
-    - redis
+    - cron

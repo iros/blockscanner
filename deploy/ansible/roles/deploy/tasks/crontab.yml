@@ -3,5 +3,4 @@
 #
 
 - name: setup cron job
-  cron: name="run scanner" minute="0" hour="0/2" job="cd {{site_path}} && date > queuer.log && node src/queuer.js >> queuer.
-log && date > filemaker.log && node src/filemaker.js >> filemaker.log"
+  cron: name="run scanner" minute="0" hour="0/2" job="cd {{site_path}} && date > queuer.log && node src/queuer.js >> queuer.log && date > filemaker.log && node src/filemaker.js >> filemaker.log"
