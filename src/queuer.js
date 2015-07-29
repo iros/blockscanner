@@ -5,9 +5,9 @@ var Redis = require("redis");
 var config = require("../config.js");
 var RedisClient = Redis.createClient(config.redis.port, config.redis.host);
 var When = require("when");
-var CSV = require("csv");
-var https = require("https");
+var request = require('request');
 var _ = require("lodash");
+var csv = require('csv');
 
 // ==== src deps
 var blockFinder = require('./blockfinder');
@@ -15,8 +15,7 @@ var parse = require(__dirname + '/parser');
 
 // ==== config
 
-var userDoc = "https://docs.google.com/spreadsheet/pub?"+
-  "key=0Al5UYaVoRpW3dE12bzRTVEp2RlJDQXdUYUFmODNiTHc&single=true&gid=0&output=csv";
+var userDoc = "https://docs.google.com/spreadsheet/pub?key=0Al5UYaVoRpW3dE12bzRTVEp2RlJDQXdUYUFmODNiTHc&single=true&gid=0&output=csv";
 
 // ==== our queues
 var blockListQueue = new Queue("JOB: Gets blocks for a user",
@@ -42,12 +41,17 @@ var messageQueue = new Queue("BROKER: Message broker",
 blockListQueue.process(function(job, done) {
 
   blockFinder(job.data.userId).then(function(blocks) {
-    messageQueue.add({
-      type: MessageTypes.GistsFetched,
-      userId: job.data.userId,
-      blocks : blocks
-    });
-    done();
+
+    if (blocks.length > 0) {
+      messageQueue.add({
+        type: MessageTypes.GistsFetched,
+        userId: job.data.userId,
+        blocks : blocks
+      });
+      done();
+    } else {
+      done();
+    }
   }, function(err) {
     done(new Error(err));
   });
@@ -216,57 +220,57 @@ messageQueue.on("completed", cleanup)
 
 // ==== MAIN RUN
 // Get the google spreadsheet of users
-https.get(userDoc, function(res) {
-  var doc = "";
+request(userDoc, function (error, response, body) {
 
-  // assemble the result
-  res.on("data", function(chunk) {
-    doc += chunk;
-  });
+  if (error) {
+    console.log(error);
+    process.exit(1);
+  }
 
-  // when we have the full document...
-  res.on("end", function() {
-    var users = [];
+  var doc = body;
 
-    // parse it as a csv and extract the user names
-    CSV()
-      .from.string(doc)
-      .on("record", function(row, idx) {
-        if (idx > 0) {
-          users.push(row[1]);
-        }
-      })
+  // parse it as a csv and extract the user names
+  var idx = 0;
+  var users = [];
+  csv.parse(doc, {columns: true}, function(err, data) {
+    data.forEach(function(d) {
+      users.push(d['Provide a github username to the person whose blocks (gists) we should scan for d3 API usage'].toLowerCase());
+    });
 
-      // when we have all the users, kick off our queue.
-      .on("end", function() {
+    // get unique list of users
+    users = _.uniq(users);
 
-        _.uniq(users).forEach(function(user) {
-          blockListQueue.add({ userId: user });
+    // queue up users
+    users.forEach(function(user) {
+      blockListQueue.add({ userId: user });
+    });
+
+    var allZero = 0;
+
+    // set watch on our queue
+    setInterval(function() {
+      When.all([
+        blockListQueue.count(),
+        gistParserQueue.count(),
+        apiAggregatorQueue.count(),
+        redisStorageQueue.count()
+      ]).then(
+        function(results) {
+          if ((results[0] + results[1] + results[2] + results[3]) === 0) {
+            allZero += 1;
+          }
+
+          // if the last 10 readings were all zero, exit program
+          if (allZero === 10) {
+            console.log("terminating");
+            process.exit();
+          }
+        }).catch(function(err) {
+           console.log(err);
+            process.exit(1);
         });
 
-        var allZero = 0;
+    }, 1000);
 
-        // set watch on our queue
-        setInterval(function() {
-          When.all([
-            blockListQueue.count(),
-            gistParserQueue.count(),
-            apiAggregatorQueue.count(),
-            redisStorageQueue.count()
-          ]).then(
-            function(results) {
-              if ((results[0] + results[1] + results[2] + results[3]) === 0) {
-                allZero += 1;
-              }
-
-              // if the last 10 readings were all zero, exit program
-              if (allZero === 10) {
-                console.log("terminating");
-                process.exit();
-              }
-            });
-
-        }, 1000);
-      });
-  });
-});
+  }); // == end csv parse
+}); // == end request
