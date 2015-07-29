@@ -6,13 +6,4 @@
   file: path={{base_path}}/redis state=directory mode=0755
 
 - name: copy redis config
-  template: src=redis dest=/{{base_path}}/redis/redis.conf
-
-- name: setup upstart script for it
-  template: src=upstart dest=/etc/init/redis-server.conf
-
-- name: reload configuration
-  sudo: true
-  shell: initctl reload-configuration
-  notify:
-    - restart redis-server
+  template: src=redis.conf dest=/{{base_path}}/redis/redis.conf

@@ -43,7 +43,18 @@
   tags:
     - config
 
+- name: setup redis
+  include: redis.yml
+  tags:
+    - redis
+
 - name: setup upstart script
   include: upstart.yml
   tags:
     - upstart
+    - redis
+
+- name: setup cronjob
+  include: redis.yml
+  tags:
+    - redis
