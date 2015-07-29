@@ -1,0 +1,11 @@
+#
+# setup upstart task
+#
+- name: copy upstart config
+  template: src=upstart.conf dest=/etc/init/redis-server.conf
+
+- name: reload configuration
+  sudo: true
+  shell: initctl reload-configuration
+  notify:
+    - restart redis

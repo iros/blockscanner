@@ -1,0 +1,9 @@
+#
+# set up redis deets
+#
+
+- name: make redis directory
+  file: path={{base_path}}/redis state=directory mode=0755
+
+- name: copy redis config
+  template: src=redis.conf dest=/{{base_path}}/redis/redis.conf

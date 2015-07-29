@@ -6,7 +6,7 @@
   "author": "Irene Ros",
   "license": "MIT",
   "dependencies": {
-    "github": "~0.1.15",
+    "github": "~0.2.4",
     "cheerio": "~0.14.0",
     "when": "~3.0.1",
     "github-oauth": "0.0.4",
