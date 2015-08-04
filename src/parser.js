@@ -37,8 +37,10 @@ module.exports = function(block) {
         if (content) {
 
           d3Functions.forEach(function(api) {
-            if (content.indexOf(api) !== -1) {
-              existing.push(api);
+            var re = new RegExp(api, 'g')
+            var matches = content.match(re)
+            if(matches && matches.length) {
+              existing.push({name: api, count: matches.length});
             }
           });
 
@@ -81,8 +83,10 @@ module.exports = function(block) {
           res.on("end", function() {
             var data = buf.toString();
             d3Functions.forEach(function(api) {
-              if (data.indexOf(api) !== -1) {
-                existing.push(api);
+              var re = new RegExp(api, 'g')
+              var matches = data.match(re)
+              if(matches && matches.length) {
+                existing.push({name: api, count: matches.length});
               }
             });
 
