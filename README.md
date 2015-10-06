@@ -12,11 +12,25 @@ you probably want to run:
 
 ## Setup
 
-1. `npm install`
-2. Update the `config.js` file with:
+0. Clone this repo locally
+1. Update the `config.js` file with:
   * your own github api token. You can read about getting tokens here: https://github.com/blog/1509-personal-api-tokens
   * your redis database connection details
-3. make sure your redis server is running
+
+You can run this from a local vagrant box by running:
+
+`vagrant up`
+
+The code will be available at `/mnt/synced` - be careful not to delete this
+folder, since it's effectively a symlink to your local copy.
+The box will have a redis server that will always run.
+You can ssh into the box by running `vagrant ssh`.
+
+If you want to run locally:
+
+`npm install`
+
+2. make sure your redis server is running
 
 ## Running
 
