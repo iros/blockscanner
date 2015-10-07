@@ -125,6 +125,8 @@ redisStorageQueue.process(function(job,done) {
         userId: job.data.userId,
         description : job.data.block.description,
         count: job.data.count,
+        created_at: job.data.block.created_at,
+        updated_at: job.data.block.updated_at,
         thumbnail: job.data.block.files["thumbnail.png"] ?
           job.data.block.files["thumbnail.png"].raw_url :
           ""
@@ -155,6 +157,8 @@ redisStorageQueue.process(function(job,done) {
           userId: job.data.userId,
           count: job.data.count,
           description: block.description,
+          created_at: job.data.block.created_at,
+          updated_at: job.data.block.updated_at,
           thumbnail : job.data.block.files["thumbnail.png"] ?
             job.data.block.files["thumbnail.png"].raw_url :
             ""
