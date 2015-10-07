@@ -4,7 +4,7 @@ var _ = require("lodash");
 
 var d3Functions = require(__dirname + '/d3Functions');
 
-var filePatterns = [/index.html/, /.+\.js$/];
+var filePatterns = [/index.html/, /.+\.js$/, /.+\.coffee$/];
 
 module.exports = function(block) {
 
@@ -16,7 +16,7 @@ module.exports = function(block) {
 
   var existing = [];
   var fileNames = Object.keys(block.files);
-  if (fileNames.length) {
+  if (block.files["index.html"] && fileNames.length) {
 
     fileNames.forEach(function(fileName) {
 
